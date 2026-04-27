@@ -32,7 +32,7 @@ local HRP          = Character:WaitForChild("HumanoidRootPart")
 local Camera       = Workspace.CurrentCamera
 
 -- ── Misc Setup ───────────────────────────────────────────────
-local isMobile        = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+local isMobile        = false
 local DroppedItems    = Workspace:WaitForChild("DroppedItems")
 local itemDrawings    = {}    -- DroppedItem ESP drawings
 local espData         = {}    -- Player ESP data
@@ -281,8 +281,8 @@ end
 --  Prediction / Aim Helpers
 -- ══════════════════════════════════════════════════════════════
 
-local HISTORY_SIZE    = 6
-local VELOCITY_SCALE  = 1.2
+local HISTORY_SIZE    = 10
+local VELOCITY_SCALE  = 1.25
 local MAX_JUMP_VEL    = 150
 local SMOOTH_MULT     = 0.75
 
@@ -311,31 +311,87 @@ end)
 local function calculateVelocity(player)
     local history = positionHistory[player]
     if not history or #history < 2 then return Vector3.new() end
-    local sum, count = Vector3.new(), 0
+    -- ใช้ weighted average โดยให้น้ำหนักกับ frame ล่าสุดมากกว่า
+    -- เพื่อให้ตามทันคนที่วิ่งซิกแซกเปลี่ยนทิศทางกะทันหัน
+    local sum, totalWeight = Vector3.new(), 0
     for i = 2, #history do
         local dt = history[i].time - history[i - 1].time
         if dt > 0 then
-            sum   = sum + (history[i].pos - history[i - 1].pos) / dt
-            count = count + 1
+            local vel    = (history[i].pos - history[i - 1].pos) / dt
+            local weight = i  -- frame ล่าสุด index สูงกว่า = น้ำหนักมากกว่า
+            sum         = sum + vel * weight
+            totalWeight = totalWeight + weight
         end
     end
-    if count == 0 then return Vector3.new() end
-    local avg = sum / count
+    if totalWeight == 0 then return Vector3.new() end
+    local avg = sum / totalWeight
     if avg.Y > MAX_JUMP_VEL then
         return Vector3.new(avg.X * 1.15, math.clamp(avg.Y * 0.85, 0, 400), avg.Z * 1.15)
     end
     return avg
 end
 
-local function predictPosition(part, _root)
+local function predictPosition(part, root)
     if not part then return Vector3.zero end
+
     local parentModel = part.Parent
     local player = parentModel and Players:GetPlayerFromCharacter(parentModel)
-    if not player then return part.Position end
-    local velocity = calculateVelocity(player) or Vector3.zero
-    local ping = (getPing and getPing()) or 0.1
-    if ping < 0 then ping = 0.1 end
-    return part.Position + (velocity * ping * VELOCITY_SCALE)
+    local velocity = (player and calculateVelocity(player)) or Vector3.zero
+
+    local ping = math.clamp(getPing(), 0.06, 0.20)
+
+    -- speed แนวนอนเท่านั้น (แม่นกว่า magnitude รวม Y)
+    local hSpeed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
+
+    -- multiplier ละเอียดขึ้น + ชดเชยการเปลี่ยนทิศ
+    local multiplier
+    if     hSpeed > 60 then multiplier = 1.50
+    elseif hSpeed > 50 then multiplier = 1.42
+    elseif hSpeed > 35 then multiplier = 1.32
+    elseif hSpeed > 20 then multiplier = 1.22
+    elseif hSpeed > 10 then multiplier = 1.15
+    else                     multiplier = 1.05
+    end
+
+    -- ถ้า ping สูง ลด multiplier นิดหน่อยเพื่อไม่ over-predict
+    if ping > 0.15 then
+        multiplier = multiplier * 0.93
+    end
+
+    local horizontal = Vector3.new(velocity.X, 0, velocity.Z) * ping * multiplier
+
+    -- vertical คมขึ้น: เพิ่ม coefficient จาก 0.22 → 0.30
+    local vertical = Vector3.new(
+        0,
+        math.clamp(velocity.Y * ping * 0.30, -4, 4),
+        0
+    )
+
+    -- jump boost ละเอียดขึ้น
+    local jumpBoost = Vector3.new(
+        0,
+        velocity.Y > 20 and 0.50
+        or velocity.Y > 15 and 0.35
+        or 0,
+        0
+    )
+
+    local headOffset = Vector3.zero
+    if part.Name == "Head" then
+        headOffset = Vector3.new(
+            0,
+            hSpeed > 30 and 0.14
+            or hSpeed > 22 and 0.10
+            or 0.05,
+            0
+        )
+    end
+
+    return part.Position
+        + horizontal
+        + vertical
+        + jumpBoost
+        + headOffset
 end
 
 local function isBehindWall(origin, target)
@@ -385,14 +441,20 @@ end
 --  FOV Circle
 -- ══════════════════════════════════════════════════════════════
 if not isMobile then
-    fovCircle             = Drawing.new("Circle")
-    fovCircle.Color       = Color3.fromRGB(255, 255, 255)
-    fovCircle.Thickness   = 1.4
-    fovCircle.NumSides    = 64
-    fovCircle.Filled      = false
-    fovCircle.Transparency = 3
-    fovCircle.Radius      = fovRadius
-    fovCircle.Visible     = false
+    local FovSegments = 8
+    local FovLines = {}
+    for i = 1, FovSegments do
+        local Line = Drawing.new("Line")
+        Line.Visible = false
+        Line.Thickness = 1.5
+        Line.Color = Color3.fromHSV(i / FovSegments, 1, 1)
+        FovLines[i] = Line
+    end
+    fovCircle = {
+        Visible = false,
+        _lines = FovLines,
+        _segments = FovSegments
+    }
 else
     local fovGui = Instance.new("ScreenGui")
     fovGui.Name   = "MobileFOV"
@@ -412,6 +474,7 @@ else
     stroke.Parent = fovCircle
     fovCircle.Parent = fovGui
 end
+
 
 -- ══════════════════════════════════════════════════════════════
 --  Silent Aim Hook (FireServer)
@@ -534,17 +597,21 @@ RunService.RenderStepped:Connect(function()
 
         -- FOV circle
         if fovCircle then
-            fovCircle.Visible = silentAimEnabled
-            if silentAimEnabled then
-                if isMobile then
-                    fovCircle.Position = UDim2.fromScale(0.5, 0.5)
-                    fovCircle.Size     = UDim2.fromOffset(fovRadius * 2, fovRadius * 2)
-                else
-                    fovCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-                    fovCircle.Radius   = fovRadius
+            if isMobile then
+                fovCircle.Visible = silentAimEnabled
+                fovCircle.Position = UDim2.fromScale(0.5, 0.5)
+                fovCircle.Size     = UDim2.fromOffset(fovRadius * 2, fovRadius * 2)
+            else
+                local Center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                for i = 1, fovCircle._segments do
+                    local angle1 = math.rad((i - 1) * (360 / fovCircle._segments))
+                    local angle2 = math.rad(i * (360 / fovCircle._segments))
+                    fovCircle._lines[i].From = Center + Vector2.new(math.cos(angle1) * fovRadius, math.sin(angle1) * fovRadius)
+                    fovCircle._lines[i].To   = Center + Vector2.new(math.cos(angle2) * fovRadius, math.sin(angle2) * fovRadius)
+                    fovCircle._lines[i].Visible = silentAimEnabled
                 end
             end
-        end
+				end
 
         -- Tracer / Red Line
         if closestPlayer and closestPlayer.Character then
@@ -602,10 +669,7 @@ RunService.RenderStepped:Connect(function()
             smoothTarget = Vector3.new()
         end
 
-        -- Fly / under-map lock
-        if jumpPowerEnabled and jumpHolding and HRP then
-            HRP.Velocity = Vector3.new(HRP.Velocity.X, jumpHeight, HRP.Velocity.Z)
-        end
+        -- under-map lock
         if snapActive and snapY and HRP then
             local pos = HRP.Position
             if math.abs(pos.Y - snapY) > 0.1 then
@@ -958,39 +1022,17 @@ end)
 -- ══════════════════════════════════════════════════════════════
 --  Skip Crate
 -- ══════════════════════════════════════════════════════════════
-local function trySkipCrate()
-    local ok, CrateModule = pcall(function()
-        return require(ReplicatedStorage.Modules.Game.CrateSystem.Crate)
-    end)
-    if not (ok and CrateModule) then return end
-    task.spawn(function()
-        local spinning = CrateModule.spinning
-        if not spinning then return end
-        local timeout = 0
-        while not spinning.get() do
-            if timeout > 3 then break end
-            task.wait(0.05)
-            timeout = timeout + 0.05
+local CrateController = require(ReplicatedStorage.Modules.Game.CrateSystem.Crate)
+task.spawn(function()
+    while true do
+        if skipCrateEnabled then
+            for _, crate in pairs(CrateController.class.objects) do
+                crate.states.open.set(true)
+                CrateController.skipping.set(true)
+            end
         end
-        if spinning.get() then
-            pcall(function() CrateModule.skip_spin() end)
-        end
-    end)
-end
-
-local function setupAutoSkip()
-    local remote = ReplicatedStorage:WaitForChild("Remotes", 5)
-    if not remote then return end
-    local sendEvt = remote:WaitForChild("Send", 5)
-    if not (sendEvt and sendEvt:IsA("RemoteEvent")) then return end
-    sendEvt.OnClientEvent:Connect(function()
-        if skipCrateEnabled then trySkipCrate() end
-    end)
-end
-
-setupAutoSkip()
-ReplicatedStorage.ChildAdded:Connect(function(child)
-    if child.Name == "Remotes" then setupAutoSkip() end
+        task.wait(0.05)
+    end
 end)
 
 -- ══════════════════════════════════════════════════════════════
@@ -1560,29 +1602,26 @@ end)
 -- ══════════════════════════════════════════════════════════════
 --  Fly (Jump Power)
 -- ══════════════════════════════════════════════════════════════
-ContextActionService:BindAction("FlyUp", function(_, state, input)
-    if not jumpPowerEnabled then return Enum.ContextActionResult.Pass end
-    local isJumpInput = (input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.Space)
-                     or (input.UserInputType == Enum.UserInputType.Touch)
-    if isJumpInput then
-        if state == Enum.UserInputState.Begin then
-            jumpHolding  = true
-            Humanoid.Jump = true
-            return Enum.ContextActionResult.Sink
-        elseif state == Enum.UserInputState.End then
-            jumpHolding = false
-            return Enum.ContextActionResult.Sink
+local jumpConn_HJ
+local function setupHighJump(char)
+    if not jumpPowerEnabled then return end
+    local humanoid = char:WaitForChild("Humanoid")
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    humanoid.UseJumpPower = true
+    humanoid.JumpPower = 60
+    if jumpConn_HJ then pcall(function() jumpConn_HJ:Disconnect() end) end
+    jumpConn_HJ = game:GetService("UserInputService").JumpRequest:Connect(function()
+        if not jumpPowerEnabled then return end
+        if hrp then
+            local look = hrp.CFrame.LookVector
+            hrp.Velocity = look * 80 + Vector3.new(0, 100, 0)
         end
-    end
-    return Enum.ContextActionResult.Pass
-end, false, Enum.KeyCode.Space)
+    end)
+end
 
-RunService.RenderStepped:Connect(function()
-    if jumpPowerEnabled and jumpHolding then
-        HRP.Velocity = Vector3.new(HRP.Velocity.X, jumpHeight, HRP.Velocity.Z)
-    end
+LocalPlayer.CharacterAdded:Connect(function(char)
+    if jumpPowerEnabled then setupHighJump(char) end
 end)
-
 -- ══════════════════════════════════════════════════════════════
 --  Hotbar lock / Sell Bypass / Emotes
 -- ══════════════════════════════════════════════════════════════
@@ -1791,16 +1830,28 @@ local FOVSlider = CombatTab:Slider({
 })
 Config:Register("FOVRadius", FOVSlider)
 
-local FriendInput = CombatTab:Input({
-    Title       = "Safe Friend",
-    Desc        = "",
-    Value       = "",
-    InputIcon   = "shield-check",
-    Type        = "Input",
-    Placeholder = "",
+local FriendDropdown = CombatTab:Dropdown({
+    Title    = "Safe Friend",
+    Desc     = "Select players to whitelist",
+    Values   = getPlayerNames(),
+    Default  = {},
+    Multi    = true,
     Callback = function(v)
         excludedPlayers = {}
-        for word in string.gmatch(v, "%S+") do table.insert(excludedPlayers, word) end
+        if type(v) == "table" then
+            for name, selected in pairs(v) do
+                if type(name) == "string" and selected == true then
+                    table.insert(excludedPlayers, name)
+                end
+            end
+            if #excludedPlayers == 0 then
+                for _, name in ipairs(v) do
+                    if type(name) == "string" then
+                        table.insert(excludedPlayers, name)
+                    end
+                end
+            end
+        end
         for _, player in pairs(Players:GetPlayers()) do
             if espData[player] and espData[player].drawings then
                 espData[player].drawings[1].Color =
@@ -1809,10 +1860,16 @@ local FriendInput = CombatTab:Input({
         end
     end,
 })
-Config:Register("FriendsList", FriendInput)
+Config:Register("FriendsList", FriendDropdown)
+
+Players.PlayerAdded:Connect(function()
+    pcall(function() FriendDropdown:Refresh(getPlayerNames(), true) end)
+end)
+Players.PlayerRemoving:Connect(function()
+    pcall(function() FriendDropdown:Refresh(getPlayerNames(), true) end)
+end)
 
 pcall(function() CombatTab:Divider() end)
-
 -- ── TAB: WEAPON ───────────────────────────────────────────────
 local WeaponTab = Window:Tab({ Title = "WEAPON:", Icon = "layers" })
 WeaponTab:Section({ Title = "MODS:" })
@@ -1945,6 +2002,17 @@ Config:Register("HighlightESP", HighlightESPToggle)
 -- ── TAB: CHARACTER ────────────────────────────────────────────
 local CharTab = Window:Tab({ Title = "CHARACTER:", Icon = "user" })
 CharTab:Section({ Title = "CHARACTER:" })
+
+local DesyncToggle = CharTab:Toggle({
+    Title   = "Desync",
+    Default = false,
+    Callback = function(v)
+        local plsraknet = Raknet or raknet
+        if plsraknet and plsraknet.desync then
+            plsraknet.desync(v)
+        end
+    end,
+})
 
 local WalkSpeedToggle = CharTab:Toggle({
     Title   = "Walk Speed",
@@ -2205,6 +2273,46 @@ PlayerTab:Divider()
 local BuyTab = Window:Tab({ Title = "BUY:", Icon = "landmark" })
 BuyTab:Section({ Title = "BUY:" })
 
+local Client = Players.LocalPlayer
+local PlayerGui = Client:WaitForChild("PlayerGui")
+
+local BankBalance =
+    BuyTab:Button(
+    {
+        Title = "🏦 Bank Balance",
+        Desc = "N/A"
+    }
+)
+local HandBalance =
+    BuyTab:Button(
+    {
+        Title = "💸 Hand Balance",
+        Desc = "N/A"
+    }
+)
+
+local function HandMoney()
+    return tonumber(PlayerGui.TopRightHud.Holder.Frame.MoneyTextLabel.Text:match("%$(%d+)"))
+end
+
+local function ATMMoney()
+    for _, v in ipairs(PlayerGui:GetDescendants()) do
+        if v:IsA("TextLabel") and string.find(v.Text, "Bank Balance") then
+            return tonumber(v.Text:match("%$(%d+)"))
+        end
+    end
+    return 0
+end
+
+task.spawn(
+    function()
+        while task.wait(0.2) do
+            BankBalance:SetDesc('<b><font color="#FFFFFF">$' .. (ATMMoney() or 0) .. "</font></b>")
+            HandBalance:SetDesc('<b><font color="#FFFFFF">$' .. (HandMoney() or 0) .. "</font></b>")
+        end
+    end
+)
+
 pcall(function()
     local SkipCrateToggle = BuyTab:Toggle({
         Title   = "Skip Crate Spin",
@@ -2361,5 +2469,185 @@ local DeleteBtn = MiscTab:Button({
     end,
 })
 Config:Register("DeleteConfig", DeleteBtn)
+
+
+-- =========================
+-- Boost FPS (ภาพกาก)
+-- =========================
+
+local Lighting = game:GetService("Lighting")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Terrain = workspace:FindFirstChildOfClass("Terrain")
+
+local function Bootsfps()
+	-- ลบท้องฟ้า + เอฟเฟกต์
+	for _, v in ipairs(Lighting:GetChildren()) do
+		if v:IsA("Sky")
+		or v:IsA("Atmosphere")
+		or v:IsA("BloomEffect")
+		or v:IsA("SunRaysEffect")
+		or v:IsA("ColorCorrectionEffect")
+		or v:IsA("DepthOfFieldEffect") then
+			v:Destroy()
+		end
+	end
+
+	-- ปิดเงา / แสง
+	Lighting.GlobalShadows = false
+	Lighting.Brightness = 0
+	Lighting.FogEnd = 9e9
+	Lighting.EnvironmentDiffuseScale = 0
+	Lighting.EnvironmentSpecularScale = 0
+
+	-- Terrain กาก
+	if Terrain then
+		Terrain.WaterWaveSize = 0
+		Terrain.WaterWaveSpeed = 0
+		Terrain.WaterReflectance = 0
+		Terrain.WaterTransparency = 1
+	end
+
+	-- ทำทั้งแมพเป็นสีเทา / plastic
+	for _, v in ipairs(workspace:GetDescendants()) do
+		if v:IsA("BasePart") then
+			v.Material = Enum.Material.Plastic
+			v.Reflectance = 0
+			v.CastShadow = false
+			v.Color = Color3.fromRGB(120,120,120)
+
+		elseif v:IsA("Decal") or v:IsA("Texture") then
+			v.Transparency = 1
+
+		elseif v:IsA("ParticleEmitter")
+		or v:IsA("Trail")
+		or v:IsA("Beam") then
+			v.Enabled = false
+		end
+	end
+end
+
+-- =========================
+-- Button ใน Tab Misc
+-- =========================
+
+MiscTab:Button({
+	Title = "Bootsfps",
+	Icon = "zap",
+	Callback = function()
+		Bootsfps()
+	end
+})
+
+-- =========================
+-- RTX ON ULTRA (ภาพโคตรสวย)
+-- =========================
+
+local Lighting = game:GetService("Lighting")
+local Terrain = workspace:FindFirstChildOfClass("Terrain")
+
+local function RTX_ON()
+	-- ล้างของเก่า
+	for _, v in ipairs(Lighting:GetChildren()) do
+		if v:IsA("Atmosphere")
+		or v:IsA("BloomEffect")
+		or v:IsA("SunRaysEffect")
+		or v:IsA("ColorCorrectionEffect")
+		or v:IsA("DepthOfFieldEffect")
+		or v:IsA("Sky") then
+			v:Destroy()
+		end
+	end
+
+	-- ===== Sky =====
+	local Sky = Instance.new("Sky")
+	Sky.SkyboxBk = "rbxassetid://159454299"
+	Sky.SkyboxDn = "rbxassetid://159454296"
+	Sky.SkyboxFt = "rbxassetid://159454293"
+	Sky.SkyboxLf = "rbxassetid://159454286"
+	Sky.SkyboxRt = "rbxassetid://159454300"
+	Sky.SkyboxUp = "rbxassetid://159454288"
+	Sky.SunAngularSize = 21
+	Sky.Parent = Lighting
+
+	-- ===== Lighting Core =====
+	Lighting.Technology = Enum.Technology.Future
+	Lighting.GlobalShadows = true
+	Lighting.ShadowSoftness = 1
+	Lighting.Brightness = 3
+	Lighting.ExposureCompensation = 0.25
+	Lighting.EnvironmentDiffuseScale = 1
+	Lighting.EnvironmentSpecularScale = 1
+	Lighting.ClockTime = 14
+
+	-- ===== Atmosphere =====
+	local Atmosphere = Instance.new("Atmosphere")
+	Atmosphere.Density = 0.35
+	Atmosphere.Offset = 0.25
+	Atmosphere.Color = Color3.fromRGB(190, 210, 255)
+	Atmosphere.Decay = Color3.fromRGB(120, 150, 200)
+	Atmosphere.Glare = 0.35
+	Atmosphere.Haze = 1.2
+	Atmosphere.Parent = Lighting
+
+	-- ===== Bloom =====
+	local Bloom = Instance.new("BloomEffect")
+	Bloom.Intensity = 1.2
+	Bloom.Size = 56
+	Bloom.Threshold = 0.85
+	Bloom.Parent = Lighting
+
+	-- ===== Sun Rays =====
+	local SunRays = Instance.new("SunRaysEffect")
+	SunRays.Intensity = 0.25
+	SunRays.Spread = 0.85
+	SunRays.Parent = Lighting
+
+	-- ===== Color Correction =====
+	local CC = Instance.new("ColorCorrectionEffect")
+	CC.Brightness = 0.05
+	CC.Contrast = 0.25
+	CC.Saturation = 0.35
+	CC.TintColor = Color3.fromRGB(255, 245, 235)
+	CC.Parent = Lighting
+
+	-- ===== Depth Of Field =====
+	local DOF = Instance.new("DepthOfFieldEffect")
+	DOF.FarIntensity = 0.25
+	DOF.NearIntensity = 0.05
+	DOF.FocusDistance = 60
+	DOF.InFocusRadius = 40
+	DOF.Parent = Lighting
+
+	-- ===== Terrain น้ำใส =====
+	if Terrain then
+		Terrain.WaterWaveSize = 1
+		Terrain.WaterWaveSpeed = 15
+		Terrain.WaterReflectance = 1
+		Terrain.WaterTransparency = 0.05
+	end
+
+	-- ===== วัสดุเงาสวย =====
+	for _, v in ipairs(workspace:GetDescendants()) do
+		if v:IsA("BasePart") then
+			v.CastShadow = true
+			if v.Material == Enum.Material.Plastic then
+				v.Material = Enum.Material.SmoothPlastic
+			end
+		end
+	end
+end
+
+-- =========================
+-- Button (Tab Misc)
+-- =========================
+
+MiscTab:Button({
+	Title = "RTX ON",
+	Icon = "sparkles",
+	Callback = function()
+		RTX_ON()
+	end
+})
 
 if Config.Load then Config.Load(Config) end
