@@ -81,6 +81,7 @@ local snapDepth           = 10
 local snapClickCount      = 0
 local underMapPos         = nil
 local isFlickering        = false
+local SelectedAimPart = "Head"
 
 local noRecoilValue   = 0
 local fireRateValue   = 1000
