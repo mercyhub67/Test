@@ -80,6 +80,27 @@ local snapClickCount      = 0
 local underMapPos         = nil
 local isFlickering        = false
 
+function isInCameraView(camera, object)
+    if object:IsA("BasePart") then
+        local objectPosition = object.Position
+        local screenPosition, isOnScreen = camera:WorldToViewportPoint(objectPosition)
+        return isOnScreen
+    end
+    return false
+end
+
+function loadVisibleObjects(camera, objects)
+    for _, object in pairs(objects) do
+        if isInCameraView(camera, object) then
+            object.Transparency = 0
+        else
+            object.Transparency = 1
+        end
+    end
+end
+
+local Objects = workspace:GetDescendants()
+
 local function IsAlive(model)
     if not model then return false end
     local Humanoids = model:FindFirstChildOfClass('Humanoid')
@@ -2614,44 +2635,15 @@ MiscTab:Button({
 	end
 })
 
-if Config.Load then Config.Load(Config) end
-
--- ฟังก์ชันตรวจสอบว่าวัตถุอยู่ในมุมมองของกล้องหรือไม่
-function isInCameraView(camera, object)
-    if object:IsA("BasePart") then -- ตรวจสอบว่าเป็นวัตถุประเภทที่เราสนใจ
-        local objectPosition = object.Position
-        local screenPosition, isOnScreen = camera:WorldToViewportPoint(objectPosition)
-        return isOnScreen
-    end
-    return false
-end
-
--- ฟังก์ชันโหลดวัตถุเฉพาะที่อยู่ในมุมมอง
-function loadVisibleObjects(camera, objects)
-    for _, object in pairs(objects) do
-        if isInCameraView(camera, object) then
-            object.Transparency = 0 -- ตัวอย่างการ "โหลด" วัตถุ (ทำให้มองเห็น)
-        else
-            object.Transparency = 1 -- ตัวอย่างการ "ยกเลิกโหลด" วัตถุ (ทำให้มองไม่เห็น)
-        end
-    end
-end
-
--- ตัวอย่างการใช้งาน
-local Camera = game.Workspace.CurrentCamera
-local ObjectsFolder = game.Workspace.ObjectsFolder -- สมมติวัตถุอยู่ในโฟลเดอร์นี้
-local Objects = ObjectsFolder:GetChildren()
-
--- อัพเดตทุกเฟรม
-game:GetService("RunService").RenderStepped:Connect(function()
-    loadVisibleObjects(Camera, Objects)
-end)
 MiscTab:Button({
 	Title = "Frustum Culling",
 	Icon = "eye",
 	Callback = function()
+		Objects = workspace:GetDescendants()
 		game:GetService("RunService").RenderStepped:Connect(function()
 			loadVisibleObjects(Camera, Objects)
 		end)
 	end
 })
+
+if Config.Load then Config.Load(Config) end
