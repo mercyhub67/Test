@@ -640,7 +640,6 @@ RunService.RenderStepped:Connect(function()
                 end
             end
 				end
-
         -- Tracer / Red Line
         if closestPlayer and closestPlayer.Character then
             local char = closestPlayer.Character
