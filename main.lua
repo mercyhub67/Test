@@ -23,7 +23,7 @@ local CoreUI        = require(ReplicatedStorage.Modules.Core.UI)
 local CharModule    = require(ReplicatedStorage.Modules.Core.Char)
 local Items         = ReplicatedStorage:WaitForChild("Items")
 local MeleeItems    = Items:WaitForChild("melee")
-local GunItems      = Items:WaitForChild("Gun")
+local GunItems      = Items:WaitForChild("gun")
 
 -- ── Local Player / Character ──────────────────────────────────
 local LocalPlayer  = Players.LocalPlayer
