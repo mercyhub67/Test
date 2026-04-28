@@ -1042,174 +1042,91 @@ task.spawn(function()
 end)
 
 -- ══════════════════════════════════════════════════════════════
---  Player ESP (Name / Distance / Health Bar)
+--  Player ESP
 -- ══════════════════════════════════════════════════════════════
+local ESP = {}
 local function createESP(player)
-    if espData[player] then return end
-
-    local nameLabel = Drawing.new("Text")
-    nameLabel.Size    = 16
-    nameLabel.Center  = true
-    nameLabel.Outline = true
-    nameLabel.Color   = isPlayerExcluded(player.Name) and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 255, 255)
-    nameLabel.Font    = 4
-
-    local distLabel = Drawing.new("Text")
-    distLabel.Size    = 14
-    distLabel.Center  = true
-    distLabel.Outline = true
-    distLabel.Color   = Color3.fromRGB(255, 255, 255)
-    distLabel.Font    = 4
-
-    local hpBg = Drawing.new("Square")
-    hpBg.Filled = false
-    hpBg.Thickness = 1
-    hpBg.Color = Color3.fromRGB(0, 0, 0)
-    hpBg.Transparency = 0.9
-    hpBg.Visible = false
-
-    local hpBar = Drawing.new("Square")
-    hpBar.Filled = true
-    hpBar.Transparency = 0.9
-    hpBar.Visible = false
-
-    local drawings = { nameLabel, distLabel, hpBg, hpBar }
-
-    local conn = RunService.RenderStepped:Connect(function()
-        if not player or not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
-            for _, d in pairs(drawings) do d.Visible = false end
-            return
-        end
-        local root = player.Character.HumanoidRootPart
-        local hum  = player.Character:FindFirstChild("Humanoid")
-        local myDist = 0
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            myDist = (root.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-        end
-        local screenPos, visible = Camera:WorldToViewportPoint(root.Position)
-        if not visible or screenPos.Z <= 0 then
-            for _, d in pairs(drawings) do d.Visible = false end
-            return
-        end
-        local sx, sy = screenPos.X, screenPos.Y - 15
-
-        -- Health bar
-        if healthESPEnabled and hum and hum.Health > 0 then
-            local pct    = hum.Health / math.max(hum.MaxHealth, 1)
-            local barW, barH = 60, 4
-            local barX   = sx - barW / 2
-            hpBg.Position = Vector2.new(barX, sy - barH - 2)
-            hpBg.Size     = Vector2.new(barW, barH)
-            hpBg.Visible  = true
-            hpBar.Position = Vector2.new(barX, sy - barH - 2)
-            hpBar.Size     = Vector2.new(barW * pct, barH)
-            hpBar.Color    = Color3.fromHSV(pct * 0.333, 0.8, 0.9)
-            hpBar.Visible  = true
-            sy = sy - barH - 6
-        else
-            hpBg.Visible  = false
-            hpBar.Visible = false
-        end
-
-        -- Name
-        if nameESPEnabled then
-            local scale = math.floor(42 - (42 - 14) * math.clamp(myDist / 50, 0, 1))
-            nameLabel.Text     = player.Name
-            nameLabel.Size     = scale
-            nameLabel.Color    = isPlayerExcluded(player.Name) and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 255, 255)
-            nameLabel.Position = Vector2.new(sx, sy - 16)
-            nameLabel.Visible  = true
-        else
-            nameLabel.Visible = false
-        end
-
-        -- Distance
-        distLabel.Text     = distanceESPEnabled and string.format("%.0f studs", myDist) or ""
-        distLabel.Position = Vector2.new(sx, screenPos.Y + 20)
-        distLabel.Visible  = distanceESPEnabled
-    end)
-
-    espData[player] = { conn = conn, drawings = drawings }
-end
-
-local function loadESP()
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then createESP(player) end
-    end
-    Players.PlayerAdded:Connect(function(player)
-        if player == LocalPlayer then return end
-        player.CharacterAdded:Connect(function()
-            task.wait(0.1)
-            if not espData[player] then createESP(player) end
-        end)
-        if player.Character then
-            task.wait(0.1)
-            createESP(player)
-        end
-    end)
-    Players.PlayerRemoving:Connect(function(player)
-        if espData[player] then
-            for _, d in pairs(espData[player].drawings) do
-                if d and d.Destroy then pcall(function() d:Destroy() end)
-                elseif typeof(d) == "table" and d.Visible ~= nil then d.Visible = false end
-            end
-            if espData[player].conn then pcall(function() espData[player].conn:Disconnect() end) end
-            espData[player] = nil
-        end
-    end)
-end
-
-loadESP()
-
--- ══════════════════════════════════════════════════════════════
---  Highlight ESP
--- ══════════════════════════════════════════════════════════════
-local function updateHighlight(player)
     if player == LocalPlayer then return end
-    if not player.Character then return end
-    if not player.Character:FindFirstChild("HumanoidRootPart") then return end
-    if highlightTable[player] then
-        highlightTable[player]:Destroy()
-        highlightTable[player] = nil
-    end
-    if highlightEnabled then
-        local h = Instance.new("Highlight")
-        h.Name         = "PlayerHighlight"
-        h.Adornee      = player.Character
-        h.FillColor    = Color3.fromRGB(0, 170, 255)
-        h.OutlineColor = Color3.fromRGB(0, 170, 255)
-        h.Parent       = Workspace
-        highlightTable[player] = h
-    end
+    local highlight = Instance.new("Highlight")
+    highlight.FillTransparency    = 0.5
+    highlight.OutlineTransparency = 0
+    highlight.Enabled = false
+    highlight.Parent  = game.CoreGui
+
+    local name = Drawing.new("Text")
+    name.Size    = 10
+    name.Center  = true
+    name.Outline = true
+    name.Color   = Color3.new(1, 1, 1)
+    name.Visible = false
+    name.Font    = 3
+
+    local info = Drawing.new("Text")
+    info.Size    = 9
+    info.Center  = true
+    info.Outline = true
+    info.Color   = Color3.new(1, 1, 1)
+    info.Visible = false
+    info.Font    = 3
+
+    ESP[player] = {Highlight = highlight, Name = name, Info = info}
 end
 
-Players.PlayerAdded:Connect(function(player)
-    player.CharacterAdded:Connect(function()
-        task.wait(0.1)
-        updateHighlight(player)
-    end)
-end)
+for _, p in pairs(Players:GetPlayers()) do createESP(p) end
+Players.PlayerAdded:Connect(createESP)
 Players.PlayerRemoving:Connect(function(player)
-    if highlightTable[player] then
-        highlightTable[player]:Destroy()
-        highlightTable[player] = nil
+    local data = ESP[player]
+    if data then
+        if data.Highlight then data.Highlight:Destroy() end
+        if data.Name      then data.Name:Remove()      end
+        if data.Info      then data.Info:Remove()      end
+        ESP[player] = nil
     end
 end)
-for _, player in pairs(Players:GetPlayers()) do
-    if player ~= LocalPlayer then
-        player.CharacterAdded:Connect(function()
-            task.wait(0.1)
-            updateHighlight(player)
-        end)
-        updateHighlight(player)
-    end
-end
 
-task.spawn(function()
-    while task.wait(1) do
-        if highlightEnabled then
-            for _, player in pairs(Players:GetPlayers()) do
-                updateHighlight(player)
+RunService.RenderStepped:Connect(function()
+    for player, data in pairs(ESP) do
+        if player.Character then
+            local hum  = player.Character:FindFirstChildOfClass("Humanoid")
+            local head = player.Character:FindFirstChild("Head")
+            local root = player.Character:FindFirstChild("HumanoidRootPart")
+            if hum and head and root and hum.Health > 0 then
+                if highlightEnabled then
+                    data.Highlight.Enabled = true
+                    data.Highlight.Adornee = player.Character
+                    local hpPercent = hum.Health / hum.MaxHealth
+                    data.Highlight.FillColor = Color3.fromRGB(255 * (1 - hpPercent), 255 * hpPercent, 0)
+                else
+                    data.Highlight.Enabled = false
+                end
+
+                local posHead, visHead = Camera:WorldToViewportPoint(head.Position)
+                local posFoot, visFoot = Camera:WorldToViewportPoint(root.Position - Vector3.new(0, 3, 0))
+
+                if nameESPEnabled then
+                    if visHead then
+                        data.Name.Visible  = true
+                        data.Name.Text     = player.Name
+                        data.Name.Position = Vector2.new(posHead.X, posHead.Y - 15)
+                    else
+                        data.Name.Visible = false
+                    end
+                    if visFoot and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                        local dist = math.floor((LocalPlayer.Character.HumanoidRootPart.Position - root.Position).Magnitude)
+                        data.Info.Visible  = true
+                        data.Info.Text     = string.format("HP: %d | %dM", math.floor(hum.Health), dist)
+                        data.Info.Position = Vector2.new(posFoot.X, posFoot.Y)
+                    else
+                        data.Info.Visible = false
+                    end
+                else
+                    data.Name.Visible = false
+                    data.Info.Visible = false
+                end
+            else
+                data.Highlight.Enabled = false
+                data.Name.Visible      = false
+                data.Info.Visible      = false
             end
         end
     end
