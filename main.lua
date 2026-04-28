@@ -1054,7 +1054,7 @@ local function createESP(player)
     highlight.Parent  = game.CoreGui
 
     local name = Drawing.new("Text")
-    name.Size    = 10
+    name.Size    = 14
     name.Center  = true
     name.Outline = true
     name.Color   = Color3.new(1, 1, 1)
@@ -1062,7 +1062,7 @@ local function createESP(player)
     name.Font    = 3
 
     local info = Drawing.new("Text")
-    info.Size    = 9
+    info.Size    = 12
     info.Center  = true
     info.Outline = true
     info.Color   = Color3.new(1, 1, 1)
@@ -1141,7 +1141,7 @@ RunService.RenderStepped:Connect(function()
                 -- Health Bar
                 if healthESPEnabled and visHead then
                     local pct  = hum.Health / math.max(hum.MaxHealth, 1)
-                    local barW, barH = 60, 4
+                    local barW, barH = 80, 6
                     local barX = posHead.X - barW / 2
                     local barY = posHead.Y - 20
                     data.HpBg.Position = Vector2.new(barX, barY)
