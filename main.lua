@@ -23,7 +23,6 @@ local CoreUI        = require(ReplicatedStorage.Modules.Core.UI)
 local CharModule    = require(ReplicatedStorage.Modules.Core.Char)
 local Items         = ReplicatedStorage:WaitForChild("Items")
 local MeleeItems    = Items:WaitForChild("melee")
-local GunItems      = Items:WaitForChild("gun")
 
 -- ── Local Player / Character ──────────────────────────────────
 local LocalPlayer  = Players.LocalPlayer
@@ -1464,7 +1463,10 @@ getEnv().GunModsAutoApply = false
 
 local function isGunTool(tool)
     if not tool or not tool:IsA("Tool") then return false end
-    return GunItems:FindFirstChild(tool.Name) ~= nil or tool.Name:match("Gun") or tool:FindFirstChild("Handle")
+    return tool:GetAttribute("fire_rate") ~= nil
+        or tool:GetAttribute("reload_time") ~= nil
+        or tool:GetAttribute("AmmoType") ~= nil
+        or GunItems:FindFirstChild(tool.Name) ~= nil
 end
 
 local function forceSetAttr(tool, attr, val)
@@ -1476,20 +1478,12 @@ end
 local function applyGodGun(tool)
     if not tool or not isGunTool(tool) then return end
     pcall(function()
-        tool:SetAttribute("fire_rate",   getEnv().FireRateValue)
-        tool:SetAttribute("FireRate",    getEnv().FireRateValue)
-        tool:SetAttribute("firerate",    getEnv().FireRateValue)
-        tool:SetAttribute("accuracy",    getEnv().AccuracyValue)
-        tool:SetAttribute("Accuracy",    getEnv().AccuracyValue)
-        tool:SetAttribute("Recoil",      getEnv().RecoilValue)
-        tool:SetAttribute("recoil",      getEnv().RecoilValue)
-        tool:SetAttribute("Durability",  getEnv().Durability)
-        tool:SetAttribute("automatic",   getEnv().AutoValue)
-        tool:SetAttribute("Automatic",   getEnv().AutoValue)
-        tool:SetAttribute("reload_time", 0.1)
-        tool:SetAttribute("ReloadTime",  0.1)
+        tool:SetAttribute("fire_rate",  getEnv().FireRateValue)
+        tool:SetAttribute("accuracy",   getEnv().AccuracyValue)
+        tool:SetAttribute("Recoil",     getEnv().RecoilValue)
+        tool:SetAttribute("Durability", getEnv().Durability)
+        tool:SetAttribute("automatic",  getEnv().AutoValue)
     end)
-end
     task.spawn(function()
         for _ = 1, 20 do
             local attrs = tool:GetAttributes()
