@@ -1123,7 +1123,7 @@ RunService.RenderStepped:Connect(function()
                 if nameESPEnabled and visHead then
                     data.Name.Visible  = true
                     data.Name.Text     = player.Name
-                    data.Name.Position = Vector2.new(posHead.X, posHead.Y - 15)
+                    data.Name.Position = Vector2.new(posHead.X, posHead.Y - 30)
                 else
                     data.Name.Visible = false
                 end
@@ -1133,7 +1133,7 @@ RunService.RenderStepped:Connect(function()
                     local dist = math.floor((LocalPlayer.Character.HumanoidRootPart.Position - root.Position).Magnitude)
                     data.Info.Visible  = true
                     data.Info.Text     = dist .. "M"
-                    data.Info.Position = Vector2.new(posFoot.X, posFoot.Y)
+                    data.Info.Position = Vector2.new(posFoot.X, posFoot.Y + 15)
                 else
                     data.Info.Visible = false
                 end
