@@ -1069,7 +1069,19 @@ local function createESP(player)
     info.Visible = false
     info.Font    = 3
 
-    ESP[player] = {Highlight = highlight, Name = name, Info = info}
+    local hpBar = Drawing.new("Square")
+    hpBar.Filled = true
+    hpBar.Transparency = 0.9
+    hpBar.Visible = false
+
+    local hpBg = Drawing.new("Square")
+    hpBg.Filled = false
+    hpBg.Thickness = 1
+    hpBg.Color = Color3.fromRGB(0, 0, 0)
+    hpBg.Transparency = 0.9
+    hpBg.Visible = false
+
+    ESP[player] = {Highlight = highlight, Name = name, Info = info, HpBar = hpBar, HpBg = hpBg}
 end
 
 for _, p in pairs(Players:GetPlayers()) do createESP(p) end
@@ -1080,6 +1092,8 @@ Players.PlayerRemoving:Connect(function(player)
         if data.Highlight then data.Highlight:Destroy() end
         if data.Name      then data.Name:Remove()      end
         if data.Info      then data.Info:Remove()      end
+        if data.HpBar     then data.HpBar:Remove()     end
+        if data.HpBg      then data.HpBg:Remove()      end
         ESP[player] = nil
     end
 end)
@@ -1091,6 +1105,8 @@ RunService.RenderStepped:Connect(function()
             local head = player.Character:FindFirstChild("Head")
             local root = player.Character:FindFirstChild("HumanoidRootPart")
             if hum and head and root and hum.Health > 0 then
+
+                -- Highlight
                 if highlightEnabled then
                     data.Highlight.Enabled = true
                     data.Highlight.Adornee = player.Character
@@ -1103,30 +1119,49 @@ RunService.RenderStepped:Connect(function()
                 local posHead, visHead = Camera:WorldToViewportPoint(head.Position)
                 local posFoot, visFoot = Camera:WorldToViewportPoint(root.Position - Vector3.new(0, 3, 0))
 
-                if nameESPEnabled then
-                    if visHead then
-                        data.Name.Visible  = true
-                        data.Name.Text     = player.Name
-                        data.Name.Position = Vector2.new(posHead.X, posHead.Y - 15)
-                    else
-                        data.Name.Visible = false
-                    end
-                    if visFoot and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                        local dist = math.floor((LocalPlayer.Character.HumanoidRootPart.Position - root.Position).Magnitude)
-                        data.Info.Visible  = true
-                        data.Info.Text     = string.format("HP: %d | %dM", math.floor(hum.Health), dist)
-                        data.Info.Position = Vector2.new(posFoot.X, posFoot.Y)
-                    else
-                        data.Info.Visible = false
-                    end
+                -- Name
+                if nameESPEnabled and visHead then
+                    data.Name.Visible  = true
+                    data.Name.Text     = player.Name
+                    data.Name.Position = Vector2.new(posHead.X, posHead.Y - 15)
                 else
                     data.Name.Visible = false
+                end
+
+                -- Distance
+                if distanceESPEnabled and visFoot and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    local dist = math.floor((LocalPlayer.Character.HumanoidRootPart.Position - root.Position).Magnitude)
+                    data.Info.Visible  = true
+                    data.Info.Text     = dist .. "M"
+                    data.Info.Position = Vector2.new(posFoot.X, posFoot.Y)
+                else
                     data.Info.Visible = false
                 end
+
+                -- Health Bar
+                if healthESPEnabled and visHead then
+                    local pct  = hum.Health / math.max(hum.MaxHealth, 1)
+                    local barW, barH = 60, 4
+                    local barX = posHead.X - barW / 2
+                    local barY = posHead.Y - 20
+                    data.HpBg.Position = Vector2.new(barX, barY)
+                    data.HpBg.Size     = Vector2.new(barW, barH)
+                    data.HpBg.Visible  = true
+                    data.HpBar.Position = Vector2.new(barX, barY)
+                    data.HpBar.Size     = Vector2.new(barW * pct, barH)
+                    data.HpBar.Color    = Color3.fromHSV(pct * 0.333, 0.8, 0.9)
+                    data.HpBar.Visible  = true
+                else
+                    data.HpBg.Visible  = false
+                    data.HpBar.Visible = false
+                end
+
             else
                 data.Highlight.Enabled = false
                 data.Name.Visible      = false
                 data.Info.Visible      = false
+                data.HpBar.Visible     = false
+                data.HpBg.Visible      = false
             end
         end
     end
