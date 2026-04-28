@@ -1821,6 +1821,16 @@ local RedLineToggle = CombatTab:Toggle({
 })
 Config:Register("SilentAimAttach", RedLineToggle)
 
+local function getPlayerNames()
+    local names = {}
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            table.insert(names, player.Name)
+        end
+    end
+    return names
+end
+
 local FOVSlider = CombatTab:Slider({
     Title = "FOV: ",
     Step  = 1,
