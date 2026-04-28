@@ -1454,7 +1454,7 @@ end)
 -- ══════════════════════════════════════════════════════════════
 local GunItems = Items:WaitForChild("gun")
 
-getEnv().FireRateValue  = 0
+getEnv().FireRateValue  = 200
 getEnv().AccuracyValue  = 1
 getEnv().RecoilValue    = 0
 getEnv().Durability     = 999999999
