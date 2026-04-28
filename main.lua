@@ -1496,16 +1496,21 @@ local function applyGodGun(tool)
     end)
 end
 
-RunService.Heartbeat:Connect(function()
-    if not getEnv().GunModsAutoApply then return end
-    local char = LocalPlayer.Character
-    if not char then return end
-    for _, tool in ipairs(char:GetChildren()) do
-        if tool:IsA("Tool") and isGunTool(tool) then pcall(applyGodGun, tool) end
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        if getEnv().GunModsAutoApply then
+            local char = LocalPlayer.Character
+            if char then
+                for _, tool in ipairs(char:GetChildren()) do
+                    if tool:IsA("Tool") and isGunTool(tool) then pcall(applyGodGun, tool) end
+                end
+                for _, tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
+                    if tool:IsA("Tool") and isGunTool(tool) then pcall(applyGodGun, tool) end
+                end
+            end
+        end
     end
-	for _, tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
-        if tool:IsA("Tool") and isGunTool(tool) then pcall(applyGodGun, tool) end
-	end
 end)
 
 LocalPlayer.CharacterAdded:Connect(function(char)
