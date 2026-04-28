@@ -2687,18 +2687,13 @@ MiscTab:Button({
 
 if Config.Load then Config.Load(Config) end
 
-task.spawn(function()
-    while true do
-        task.wait(0.1)
-        if getgenv().AntiAim then
-            pcall(function()
-                local HumanoidModule = CharModule.get_hum()
-                if HumanoidModule and not HumanoidModule:GetAttribute("HasBeenDowned") then
-                    local RootPartModule = CharModule.get_hrp()
-                    HighVelocity(RootPartModule, HRP)
-                    Csync(RootPartModule)
-                end
-            end)
+RunService.Heartbeat:Connect(function()
+    if getgenv().AntiAim then
+        local HumanoidModule = CharModule.get_hum()
+        if HumanoidModule and not HumanoidModule:GetAttribute("HasBeenDowned") then
+            local RootPartModule = CharModule.get_hrp()
+            HighVelocity(RootPartModule, HRP)
+            Csync(RootPartModule)
         end
     end
 end)
