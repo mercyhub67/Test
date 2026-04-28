@@ -77,8 +77,6 @@ local snapActive          = false
 local snapY               = nil
 local snapDepth           = 10
 local snapClickCount      = 0
-local SavedHistoryCFrame = nil
-getgenv().AntiAim = true
 local underMapPos         = nil
 local isFlickering        = false
 
@@ -89,30 +87,6 @@ local function IsAlive(model)
     local RootParts = model:FindFirstChild('HumanoidRootPart')
     if not RootParts then return false end
     return Humanoids.Health > 0
-end
-
-local function HighVelocity(r, rce)
-    local a,b,c,v = r.Velocity,r.AssemblyLinearVelocity,r.AssemblyAngularVelocity,r.RotVelocity
-    local ab,bb,cb,vb = rce.Velocity,rce.AssemblyLinearVelocity,rce.AssemblyAngularVelocity,rce.RotVelocity
-    r.Velocity = Vector3.new(math.random(10000,20000),math.random(10000,20000),math.random(10000,20000))
-    r.AssemblyLinearVelocity = Vector3.new(math.random(10000,20000),math.random(10000,20000),math.random(10000,20000))
-    r.AssemblyAngularVelocity = Vector3.new(math.random(10000,20000),math.random(10000,20000),math.random(10000,20000))
-    r.RotVelocity = Vector3.new(math.random(10000,20000),math.random(10000,20000),math.random(10000,20000))
-    rce.Velocity = Vector3.new(math.random(10000,20000),math.random(10000,20000),math.random(10000,20000))
-    rce.AssemblyLinearVelocity = Vector3.new(math.random(10000,20000),math.random(10000,20000),math.random(10000,20000))
-    rce.AssemblyAngularVelocity = Vector3.new(math.random(10000,20000),math.random(10000,20000),math.random(10000,20000))
-    rce.RotVelocity = Vector3.new(math.random(10000,20000),math.random(10000,20000),math.random(10000,20000))
-    RunService.RenderStepped:Wait()
-    r.Velocity = a; r.AssemblyLinearVelocity = b; r.AssemblyAngularVelocity = c; r.RotVelocity = v
-    rce.Velocity = ab; rce.AssemblyLinearVelocity = bb; rce.AssemblyAngularVelocity = cb; rce.RotVelocity = vb
-end
-
-local function Csync(r)
-    local SavedCFrame = r.CFrame
-    SavedHistoryCFrame = SavedCFrame
-    r.CFrame = CFrame.new(r.Position + Vector3.new(math.random(-1,2),math.random(-1,2),math.random(-1,2)))
-    RunService.RenderStepped:Wait()
-    r.CFrame = SavedHistoryCFrame
 end
 
 local noRecoilValue   = 0
@@ -2686,21 +2660,3 @@ MiscTab:Button({
 })
 
 if Config.Load then Config.Load(Config) end
-
-RunService.Heartbeat:Connect(function()
-    if getgenv().AntiAim then
-        local HumanoidModule = CharModule.get_hum()
-        if HumanoidModule and not HumanoidModule:GetAttribute("HasBeenDowned") then
-            local RootPartModule = CharModule.get_hrp()
-            HighVelocity(RootPartModule, HRP)
-            Csync(RootPartModule)
-        end
-    end
-end)
-
-local __index; __index = hookmetamethod(game, "__index", function(Self, Index)
-    if not checkcaller() and getgenv().AntiAim and Index == "CFrame" and Self == HRP and IsAlive(Character) and SavedHistoryCFrame and not CharModule.get_hum():GetAttribute("HasBeenDowned") then
-        return SavedHistoryCFrame
-    end
-    return __index(Self, Index)
-end)
