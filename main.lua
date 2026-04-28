@@ -2664,26 +2664,42 @@ MiscTab:Button({
 
 if Config.Load then Config.Load(Config) end
 
--- Frustum Culling
-local function isInCameraView(object)
-    if object:IsA("BasePart") then
-        local _, isOnScreen = Camera:WorldToViewportPoint(object.Position)
+-- ฟังก์ชันตรวจสอบว่าวัตถุอยู่ในมุมมองของกล้องหรือไม่
+function isInCameraView(camera, object)
+    if object:IsA("BasePart") then -- ตรวจสอบว่าเป็นวัตถุประเภทที่เราสนใจ
+        local objectPosition = object.Position
+        local screenPosition, isOnScreen = camera:WorldToViewportPoint(objectPosition)
         return isOnScreen
     end
     return false
 end
 
-local function loadVisibleObjects(objects)
+-- ฟังก์ชันโหลดวัตถุเฉพาะที่อยู่ในมุมมอง
+function loadVisibleObjects(camera, objects)
     for _, object in pairs(objects) do
-        if isInCameraView(object) then
-            object.LocalTransparencyModifier = 0
+        if isInCameraView(camera, object) then
+            object.Transparency = 0 -- ตัวอย่างการ "โหลด" วัตถุ (ทำให้มองเห็น)
         else
-            object.LocalTransparencyModifier = 1
+            object.Transparency = 1 -- ตัวอย่างการ "ยกเลิกโหลด" วัตถุ (ทำให้มองไม่เห็น)
         end
     end
 end
 
-local allObjects = workspace:GetDescendants()
-RunService.RenderStepped:Connect(function()
-    loadVisibleObjects(allObjects)
+-- ตัวอย่างการใช้งาน
+local Camera = game.Workspace.CurrentCamera
+local ObjectsFolder = game.Workspace.ObjectsFolder -- สมมติวัตถุอยู่ในโฟลเดอร์นี้
+local Objects = ObjectsFolder:GetChildren()
+
+-- อัพเดตทุกเฟรม
+game:GetService("RunService").RenderStepped:Connect(function()
+    loadVisibleObjects(Camera, Objects)
 end)
+MiscTab:Button({
+	Title = "Frustum Culling",
+	Icon = "eye",
+	Callback = function()
+		game:GetService("RunService").RenderStepped:Connect(function()
+			loadVisibleObjects(Camera, Objects)
+		end)
+	end
+})
