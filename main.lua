@@ -1503,6 +1503,9 @@ RunService.Heartbeat:Connect(function()
     for _, tool in ipairs(char:GetChildren()) do
         if tool:IsA("Tool") and isGunTool(tool) then pcall(applyGodGun, tool) end
     end
+	for _, tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
+        if tool:IsA("Tool") and isGunTool(tool) then pcall(applyGodGun, tool) end
+	end
 end)
 
 LocalPlayer.CharacterAdded:Connect(function(char)
