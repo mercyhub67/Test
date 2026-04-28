@@ -766,11 +766,13 @@ RunService.Heartbeat:Connect(function()
     if getEnv().Sky and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         pcall(function()
             local root    = LocalPlayer.Character.HumanoidRootPart
-            local prevVel = root.AssemblyLinearVelocity
+            local prevVel = root.Velocity
             local angle   = math.rad(tick() * 1500 % 360)
             local amount  = getEnv().SkyAmount
             root.AssemblyLinearVelocity = Vector3.new(math.cos(angle) * amount, math.random(280, 480), math.sin(angle) * amount)
+            root.Velocity = Vector3.new(math.cos(angle) * amount, math.random(280, 480), math.sin(angle) * amount)
             RunService.RenderStepped:Wait()
+            root.Velocity = prevVel
             root.AssemblyLinearVelocity = prevVel
         end)
     end
