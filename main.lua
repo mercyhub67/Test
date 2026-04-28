@@ -764,10 +764,15 @@ end)
 -- Anti-Lock (sky velocity)
 RunService.Heartbeat:Connect(function()
     if getEnv().Sky and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        local root  = LocalPlayer.Character.HumanoidRootPart
-        local angle = math.rad(tick() * 1500 % 360)
-        local amount = getEnv().SkyAmount
-        root.AssemblyLinearVelocity = Vector3.new(math.cos(angle) * amount, math.random(280, 480), math.sin(angle) * amount)
+        pcall(function()
+            local root    = LocalPlayer.Character.HumanoidRootPart
+            local prevVel = root.AssemblyLinearVelocity
+            local angle   = math.rad(tick() * 1500 % 360)
+            local amount  = getEnv().SkyAmount
+            root.AssemblyLinearVelocity = Vector3.new(math.cos(angle) * amount, math.random(280, 480), math.sin(angle) * amount)
+            RunService.RenderStepped:Wait()
+            root.AssemblyLinearVelocity = prevVel
+        end)
     end
 end)
 
