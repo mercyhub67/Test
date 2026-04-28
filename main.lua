@@ -1454,7 +1454,7 @@ end)
 -- ══════════════════════════════════════════════════════════════
 local GunItems = Items:WaitForChild("gun")
 
-getEnv().FireRateValue  = 1000
+getEnv().FireRateValue  = 0
 getEnv().AccuracyValue  = 1
 getEnv().RecoilValue    = 0
 getEnv().Durability     = 999999999
@@ -1862,7 +1862,7 @@ WeaponTab:Section({ Title = "MODS:" })
 WeaponTab:Slider({
     Title = "Fire Rate",
     Step  = 10,
-    Value = { Min = 100, Max = 3000, Default = 1000 },
+    Value = { Min = 0, Max = 3000, Default = 1000 },
     Callback = function(v) getEnv().FireRateValue = v end,
 })
 
@@ -2226,7 +2226,7 @@ Config:Register("SnapUnderMap", SnapToggle)
 local SnapSlider = CharTab:Slider({
     Title = "Snap:",
     Step  = 1,
-    Value = { Min = 1, Max = 1000, Default = 10 },
+    Value = { Min = 1, Max = 100, Default = 10 },
     Callback = function(v)
         snapDepth = v
         if snapActive and HRP and snapY then
