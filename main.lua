@@ -1862,8 +1862,19 @@ WeaponTab:Section({ Title = "MODS:" })
 WeaponTab:Slider({
     Title = "Fire Rate",
     Step  = 10,
-    Value = { Min = 0, Max = 3000, Default = 1000 },
-    Callback = function(v) getEnv().FireRateValue = v end,
+    Value = { Min = 0, Max = 9999, Default = 1000 },
+    Callback = function(v)
+        getEnv().FireRateValue = v
+        local char = LocalPlayer.Character
+        if char then
+            for _, tool in ipairs(char:GetChildren()) do
+                if tool:IsA("Tool") and isGunTool(tool) then pcall(applyGodGun, tool) end
+            end
+        end
+        for _, tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
+            if tool:IsA("Tool") and isGunTool(tool) then pcall(applyGodGun, tool) end
+        end
+    end,
 })
 
 WeaponTab:Slider({
