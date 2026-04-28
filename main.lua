@@ -23,6 +23,7 @@ local CoreUI        = require(ReplicatedStorage.Modules.Core.UI)
 local CharModule    = require(ReplicatedStorage.Modules.Core.Char)
 local Items         = ReplicatedStorage:WaitForChild("Items")
 local MeleeItems    = Items:WaitForChild("melee")
+local GunItems      = Items:WaitForChild("Gun")
 
 -- ── Local Player / Character ──────────────────────────────────
 local LocalPlayer  = Players.LocalPlayer
@@ -1463,10 +1464,7 @@ getEnv().GunModsAutoApply = false
 
 local function isGunTool(tool)
     if not tool or not tool:IsA("Tool") then return false end
-    return tool:GetAttribute("fire_rate") ~= nil
-        or tool:GetAttribute("reload_time") ~= nil
-        or tool:GetAttribute("AmmoType") ~= nil
-        or GunItems:FindFirstChild(tool.Name) ~= nil
+    return GunItems:FindFirstChild(tool.Name) ~= nil or tool.Name:match("Gun") or tool:FindFirstChild("Handle")
 end
 
 local function forceSetAttr(tool, attr, val)
@@ -1504,6 +1502,9 @@ RunService.Heartbeat:Connect(function()
     local char = LocalPlayer.Character
     if not char then return end
     for _, tool in ipairs(char:GetChildren()) do
+        if tool:IsA("Tool") and isGunTool(tool) then pcall(applyGodGun, tool) end
+    end
+    for _, tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
         if tool:IsA("Tool") and isGunTool(tool) then pcall(applyGodGun, tool) end
     end
 end)
