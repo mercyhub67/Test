@@ -764,19 +764,13 @@ end)
 -- Anti-Lock (sky velocity)
 RunService.Heartbeat:Connect(function()
     if getEnv().Sky and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        pcall(function()
-            local root  = LocalPlayer.Character.HumanoidRootPart
-            local angle = math.rad(tick() * 1500 % 360)
-            local amount = getEnv().SkyAmount
-            
-            -- ส่งไปเซิร์ฟเวอร์
-            root.AssemblyLinearVelocity = Vector3.new(math.cos(angle) * amount, math.random(280, 480), math.sin(angle) * amount)
-            
-            -- reset ฝั่ง client อย่างเดียว
-            local cf = root.CFrame
-            RunService.RenderStepped:Wait()
-            root.CFrame = cf
-        end)
+        local root    = LocalPlayer.Character.HumanoidRootPart
+        local prevVel = root.Velocity
+        local angle   = math.rad(tick() * 1500 % 360)
+        local amount  = getEnv().SkyAmount
+        root.Velocity = Vector3.new(math.cos(angle) * amount, math.random(280, 480), math.sin(angle) * amount)
+        RunService.RenderStepped:Wait()
+        root.Velocity = prevVel
     end
 end)
 
