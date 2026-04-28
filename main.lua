@@ -2663,3 +2663,27 @@ MiscTab:Button({
 })
 
 if Config.Load then Config.Load(Config) end
+
+-- Frustum Culling
+local function isInCameraView(object)
+    if object:IsA("BasePart") then
+        local _, isOnScreen = Camera:WorldToViewportPoint(object.Position)
+        return isOnScreen
+    end
+    return false
+end
+
+local function loadVisibleObjects(objects)
+    for _, object in pairs(objects) do
+        if isInCameraView(object) then
+            object.LocalTransparencyModifier = 0
+        else
+            object.LocalTransparencyModifier = 1
+        end
+    end
+end
+
+local allObjects = workspace:GetDescendants()
+RunService.RenderStepped:Connect(function()
+    loadVisibleObjects(allObjects)
+end)
