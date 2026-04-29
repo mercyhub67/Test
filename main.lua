@@ -40,7 +40,7 @@ do
     title.Size = UDim2.new(1,0,0,34)
     title.Position = UDim2.new(0,0,0,4)
     title.BackgroundTransparency = 1
-    title.Text = "Zenith Hub"
+    title.Text = "Mercy Hub"
     title.Font = FONT
     title.TextSize = 22
     title.TextColor3 = Color3.fromRGB(255,255,255)
