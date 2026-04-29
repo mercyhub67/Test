@@ -2808,17 +2808,22 @@ MiscTab:Button({
 
 if Config.Load then Config.Load(Config) end
 
--- ============================================================
---  AMMO CRATE SYSTEM (Added)
--- ============================================================
-
--- ฟังก์ชันดึง CrateOptions จาก Workspace
 local function getCrateOptions()
-    local crate = workspace:FindFirstChild("Ammo Crate") or workspace:FindFirstChild("Crate")
-    if crate then
-        return crate:FindFirstChild("CrateOptions")
-    end
-    return nil
+    local map = workspace:FindFirstChild("Map")
+    if not map then return nil end
+    local tiles = map:FindFirstChild("Tiles")
+    if not tiles then return nil end
+    local gunShopTile = tiles:FindFirstChild("GunShopTile")
+    if not gunShopTile then return nil end
+    local patriotWeapons = gunShopTile:FindFirstChild("PatriotWeapons")
+    if not patriotWeapons then return nil end
+    local interior = patriotWeapons:FindFirstChild("Interior")
+    if not interior then return nil end
+    local crates = interior:FindFirstChild("Crates")
+    if not crates then return nil end
+    local ammoCrate = crates:FindFirstChild("Ammo Crate")
+    if not ammoCrate then return nil end
+    return ammoCrate:FindFirstChild("CrateOptions")
 end
 
 -- ฟังก์ชันเปิด crate ตามประเภทกระสุนที่เลือก
@@ -2837,8 +2842,8 @@ local function openCrateWithType(bulletType)
         return
     end
     
-    -[span_0](start_span)- เรียก netGet (ฟังก์ชันที่มีอยู่แล้วในสคริปต์หลัก[span_0](end_span))
-    local result = netGet("open_crate", targetItem, "money")
+    -- เรียก NetGet (ฟังก์ชันที่มีอยู่แล้วในสคริปต์หลัก)
+    local result = NetGet("open_crate", targetItem, "money")
     if result then
         print("✅ เปิด crate สำเร็จ ประเภท:", bulletType)
         if WindUI then WindUI:Notify({Title = "🔫 เปิด " .. bulletType .. " สำเร็จ", Duration = 2}) end
@@ -2848,19 +2853,15 @@ local function openCrateWithType(bulletType)
     end
 end
 
--[span_1](start_span)- สร้าง Tab ใหม่ชื่อ "REMOTE" ใน Window หลัก[span_1](end_span)
-local Tab_remote = Window:Tab({Title = "REMOTE:", Icon = "satellite-dish"})
-Tab_remote:Section({Title = "AMMO CRATE CONTROLLER"})
-
 -- ตัวแปรเก็บประเภทที่เลือกจาก dropdown
 local selectedBulletType = "Pistol"
 
--- Dropdown สำหรับเลือกประเภทกระสุน
-Tab_remote:Dropdown({
+-- Dropdown แบบเลือกเดี่ยว (ใช้ syntax WindUI)
+local bulletDropdown = BuyTab:Dropdown({
     Title = "เลือกประเภทกระสุน",
     Values = {"Pistol", "Rifle", "Shotgun", "Random"},
-    Value = "Pistol",
-    Multi = false,
+    Value = "Pistol",          -- ค่าเริ่มต้น
+    Multi = false,             -- เลือกได้แค่ค่าเดียว
     Callback = function(selected)
         selectedBulletType = selected
         if selected == "Random" then
@@ -2871,8 +2872,7 @@ Tab_remote:Dropdown({
     end
 })
 
--- ปุ่มกดเปิด Crate
-Tab_remote:Button({
+BuyTab:Button({
     Title = "เปิด Ammo Crate",
     Desc = "ใช้ประเภทกระสุนที่เลือกจาก dropdown",
     Callback = function()
@@ -2880,6 +2880,7 @@ Tab_remote:Button({
         if useType == "Random" then
             local options = {"Pistol", "Rifle", "Shotgun"}
             useType = options[math.random(1, #options)]
+           
             if WindUI then WindUI:Notify({Title = "สุ่มได้ " .. useType, Duration = 1}) end
         end
         openCrateWithType(useType)
