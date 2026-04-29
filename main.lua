@@ -39,8 +39,8 @@ local function checkCondition()
     return false
 end
 
-task.wait(1)
-if checkCondition() then
+task.wait(2)
+if true then
     local FONT = Enum.Font.GothamBold
 
     local screenGui = Instance.new("ScreenGui")
