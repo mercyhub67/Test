@@ -3,6 +3,216 @@
 --  Cleaned & Deobfuscated by formatter
 -- ============================================================
 
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Debris = game:GetService("Debris")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local PathfindingService = game:GetService("PathfindingService")
+local VIM = game:GetService("VirtualInputManager")
+local GuiService = game:GetService("GuiService")
+local UserInputService = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
+local Net = require(ReplicatedStorage.Modules.Core.Net)
+local RagdollModule = require(game.ReplicatedStorage.Modules.Game.Ragdoll)
+local CharModule = require(game.ReplicatedStorage.Modules.Core.Char)
+
+local Client = Players.LocalPlayer
+
+local TweenService = game:GetService("TweenService")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local Done = false
+
+local function checkCondition()
+    local splashScreenGui = playerGui:FindFirstChild("SplashScreenGui")
+    if splashScreenGui then
+        local frame = splashScreenGui:FindFirstChild("Frame")
+        if frame then
+            local playButton = frame:FindFirstChild("PlayButton")
+            if playButton and playButton.Visible == true then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+if checkCondition() then
+    local FONT = Enum.Font.GothamBold
+
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "zhXUI"
+    screenGui.ResetOnSpawn = false
+    screenGui.IgnoreGuiInset = true
+    screenGui.Parent = playerGui
+
+    local main = Instance.new("Frame")
+    main.Size = UDim2.new(0,320,0,120)
+    main.Position = UDim2.fromScale(0.5,0.5)
+    main.AnchorPoint = Vector2.new(0.5,0.5)
+    main.BackgroundColor3 = Color3.fromRGB(255,255,120)
+    main.BackgroundTransparency = 0.45
+    main.BorderSizePixel = 0
+    main.Parent = screenGui
+    Instance.new("UICorner",main).CornerRadius = UDim.new(0,14)
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(255,255,180)
+    stroke.Thickness = 1.2
+    stroke.Transparency = 0.25
+    stroke.Parent = main
+
+    local blur = Instance.new("UIGradient")
+    blur.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0,Color3.fromRGB(255,255,170)),
+        ColorSequenceKeypoint.new(1,Color3.fromRGB(255,240,120))
+    }
+    blur.Rotation = 90
+    blur.Parent = main
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1,0,0,34)
+    title.Position = UDim2.new(0,0,0,4)
+    title.BackgroundTransparency = 1
+    title.Text = "Zenith Hub"
+    title.Font = FONT
+    title.TextSize = 22
+    title.TextColor3 = Color3.fromRGB(40,40,40)
+    title.Parent = main
+
+    local function makeButton(txt,x)
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(0,130,0,38)
+        btn.Position = UDim2.new(0,x,0,62)
+        btn.BackgroundColor3 = Color3.fromRGB(255,255,255)
+        btn.BackgroundTransparency = 0.35
+        btn.Text = txt
+        btn.Font = FONT
+        btn.TextSize = 16
+        btn.TextColor3 = Color3.fromRGB(30,30,30)
+        btn.AutoButtonColor = false
+        btn.Parent = main
+        Instance.new("UICorner",btn).CornerRadius = UDim.new(0,10)
+
+        local s = Instance.new("UIStroke")
+        s.Color = Color3.fromRGB(255,255,180)
+        s.Thickness = 1
+        s.Transparency = 0.35
+        s.Parent = btn
+
+        return btn
+    end
+
+    local normalBtn = makeButton("Normal mode",20)
+    local godBtn = makeButton("God mode",170)
+
+    local function destroyUI()
+        local tw = TweenService:Create(main,TweenInfo.new(0.22),{
+            Size = UDim2.new(0,0,0,0),
+            BackgroundTransparency = 1
+        })
+        tw:Play()
+        tw.Completed:Wait()
+        screenGui:Destroy()
+    end
+
+    
+    local function pressButton(guiObject)
+        if not guiObject then return end
+
+        pcall(function()
+            guiObject:Activate()
+        end)
+
+        pcall(function()
+            firesignal(guiObject.MouseButton1Click)
+        end)
+
+        pcall(function()
+            firesignal(guiObject.Activated)
+        end)
+    end
+
+    normalBtn.MouseButton1Click:Connect(function()
+        destroyUI()
+
+        task.spawn(function()
+            task.wait(2.5)
+
+            local splashGui = playerGui:FindFirstChild("SplashScreenGui")
+            if splashGui and splashGui.Enabled then
+                local frame = splashGui:FindFirstChild("Frame")
+                local playButton = frame and frame:FindFirstChild("PlayButton")
+                pressButton(playButton)
+            end
+
+            Done = true
+        end)
+    end)
+
+    godBtn.MouseButton1Click:Connect(function()
+        destroyUI()
+
+        task.spawn(function()
+            local Creator = require(ReplicatedStorage.Modules.Game.CharacterCreator.CharacterCreator)
+            local Util = require(ReplicatedStorage.Modules.Core.Util)
+            local UI = require(ReplicatedStorage.Modules.Core.UI)
+            local Char = require(ReplicatedStorage.Modules.Core.Char)
+
+            if not _G.Bypass then
+                local func = getupvalue(Net.get,2)
+                if func then
+                    setconstant(func,3,"KUYIENGOKUYIENGO")
+                    setconstant(func,4,"KUYIENGOKUYIENGO")
+                end
+                _G.Bypass = true
+            end
+
+            local old
+            old = hookfunction(Net.send,function(...)
+                local d = {...}
+                if d[1] == "leave_character_creator" or d[1] == "player_created_outfit" then
+                    return nil
+                end
+                return old(...)
+            end)
+
+            task.wait(2.5)
+
+            local splashGui = playerGui:FindFirstChild("SplashScreenGui")
+            if splashGui and splashGui.Enabled then
+                local frame = splashGui:FindFirstChild("Frame")
+                local playButton = frame and frame:FindFirstChild("PlayButton")
+                pressButton(playButton)
+            end
+
+            task.wait(4)
+
+            local characterCreator = playerGui:FindFirstChild("CharacterCreator")
+            if characterCreator then
+                local menuFrame = characterCreator:FindFirstChild("MenuFrame")
+                local skipButton = menuFrame and menuFrame:FindFirstChild("AvatarMenuSkipButton")
+                pressButton(skipButton)
+            end
+
+            task.wait(2.5)
+            replicatesignal(game.Players.LocalPlayer.Kill)
+
+            task.wait(7)
+            Net.send("death_screen_request_respawn")
+
+            Done = true
+        end)
+    end)
+
+else
+    Done = true
+end
+
+repeat task.wait() until Done
+
 -- ── Services ─────────────────────────────────────────────────
 local Players             = game:GetService("Players")
 local RunService          = game:GetService("RunService")
