@@ -2807,6 +2807,7 @@ MiscTab:Button({
 })
 
 if Config.Load then Config.Load(Config) end
+
 -- ฟังก์ชันเปิด crate ตามประเภทกระสุนที่เลือก
 local function openCrateWithType(bulletType)
     local crateOptions = getCrateOptions()
