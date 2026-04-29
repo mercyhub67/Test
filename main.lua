@@ -39,6 +39,7 @@ local function checkCondition()
     return false
 end
 
+task.wait(1)
 if checkCondition() then
     local FONT = Enum.Font.GothamBold
 
