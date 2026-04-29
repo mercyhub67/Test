@@ -261,7 +261,7 @@ local sendEventCounter = 0
 local sendFuncCounter  = 0
 
 local smoothTarget    = Vector3.new()
-local smoothFactor    = 0.75
+local smoothFactor    = 1
 local tracerLines     = nil
 local fovCircle       = nil
 local redLine         = Drawing.new("Line")
