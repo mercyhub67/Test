@@ -2843,7 +2843,7 @@ local function openCrateWithType(bulletType)
     end
     
     -- เรียก NetGet (ฟังก์ชันที่มีอยู่แล้วในสคริปต์หลัก)
-    local result = NetGet("open_crate", targetItem, "money")
+    local result = netGet("open_crate", targetItem, "money")
     if result then
         print("✅ เปิด crate สำเร็จ ประเภท:", bulletType)
         if WindUI then WindUI:Notify({Title = "🔫 เปิด " .. bulletType .. " สำเร็จ", Duration = 2}) end
