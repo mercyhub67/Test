@@ -933,7 +933,7 @@ RunService.Heartbeat:Connect(function()
         local angle   = math.rad(tick() * 1500 % 360)
         local amount  = getEnv().SkyAmount
         root.Velocity = Vector3.new(math.cos(angle) * amount, math.random(280, 480), math.sin(angle) * amount)
-        RunService.RenderStepped:Wait()
+        task.wait()
         root.Velocity = prevVel
     end
 end)
