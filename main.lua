@@ -213,6 +213,7 @@ local autoFinishEnabled   = false
 local meleeAuraEnabled    = false
 local autoAttackEnabled   = false
 local skipCrateEnabled    = false
+_G.AntiLock = false
 
 local snapUnderMapEnabled = false
 local snapActive          = false
@@ -2242,16 +2243,6 @@ local AntiKillToggle = CharTab:Toggle({
     end,
 })
 Config:Register("AntiKill", AntiKillToggle)
-
-_G.AntiLock = false
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local LocalPlayer = Players.LocalPlayer
-local CharModule = require(ReplicatedStorage.Modules.Core.Char)
-
 
 local AntiAimAnimTrack = nil
 local ANIM_ID = "rbxassetid://104767795538635"
