@@ -221,27 +221,6 @@ local snapClickCount      = 0
 local underMapPos         = nil
 local isFlickering        = false
 
-function isInCameraView(camera, object)
-    if object:IsA("BasePart") then
-        local objectPosition = object.Position
-        local screenPosition, isOnScreen = camera:WorldToViewportPoint(objectPosition)
-        return isOnScreen
-    end
-    return false
-end
-
-function loadVisibleObjects(camera, objects)
-    for _, object in pairs(objects) do
-        if isInCameraView(camera, object) then
-            object.Transparency = 0
-        else
-            object.Transparency = 1
-        end
-    end
-end
-
-local Objects = workspace:GetDescendants()
-
 local function IsAlive(model)
     if not model then return false end
     local Humanoids = model:FindFirstChildOfClass('Humanoid')
@@ -2852,17 +2831,6 @@ MiscTab:Button({
 	Icon = "sparkles",
 	Callback = function()
 		RTX_ON()
-	end
-})
-
-MiscTab:Button({
-	Title = "Frustum Culling",
-	Icon = "eye",
-	Callback = function()
-		Objects = workspace:GetDescendants()
-		game:GetService("RunService").RenderStepped:Connect(function()
-			loadVisibleObjects(Camera, Objects)
-		end)
 	end
 })
 
