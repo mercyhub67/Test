@@ -2380,6 +2380,141 @@ Config:Register("SnapHeight", SnapSlider)
 local PlayerTab = Window:Tab({ Title = "PLAYER:", Icon = "person-standing" })
 PlayerTab:Section({ Title = "PLAYER:" })
 
+PlayerTab:Divider()
+PlayerTab:Section({Title = "ดึงผู้เล่น (Bring)"})
+
+local selectedBringPlayer = ""
+local BringActive = false
+local BringConnection = nil
+
+local _bringFolder = Instance.new("Folder", workspace)
+_bringFolder.Name = "BringSystem"
+local _bringCorePart = Instance.new("Part", _bringFolder)
+_bringCorePart.Name = "BringCore"
+_bringCorePart.Anchored = true
+_bringCorePart.CanCollide = false
+_bringCorePart.Transparency = 1
+local _bringAttachment1 = Instance.new("Attachment", _bringCorePart)
+_bringAttachment1.Name = "BringAttachment"
+
+local function _forcePart(v)
+    if v:IsA("BasePart") and not v.Anchored and not v.Parent:FindFirstChildOfClass("Humanoid") and
+       not v.Parent:FindFirstChild("Head") and v.Name ~= "Handle" then
+        for _, obj in ipairs(v:GetChildren()) do
+            if obj:IsA("BodyMover") or obj:IsA("RocketPropulsion") then obj:Destroy() end
+        end
+        for _, junk in ipairs({"Attachment", "AlignPosition", "Torque"}) do
+            local f = v:FindFirstChild(junk)
+            if f then f:Destroy() end
+        end
+        v.CanCollide = false
+        local Torque = Instance.new("Torque", v)
+        local AlignPos = Instance.new("AlignPosition", v)
+        local Att2 = Instance.new("Attachment", v)
+        Torque.Torque = Vector3.new(100000, 100000, 100000)
+        Torque.Attachment0 = Att2
+        AlignPos.MaxForce = math.huge
+        AlignPos.MaxVelocity = math.huge
+        AlignPos.Responsiveness = 9999
+        AlignPos.Attachment0 = Att2
+        AlignPos.Attachment1 = _bringAttachment1
+    end
+end
+
+local function getPlayer(name)
+    name = string.lower(name)
+    for _, p in ipairs(Players:GetPlayers()) do
+        if string.find(string.lower(p.Name), name) or string.find(string.lower(p.DisplayName), name) then
+            return p
+        end
+    end
+    return nil
+end
+
+local function toggleBringPlayer(playerName, state)
+    BringActive = state
+    if BringConnection then BringConnection:Disconnect() BringConnection = nil end
+    if not state then return end
+    local target = getPlayer(playerName)
+    if not target then
+        game:GetService("StarterGui"):SetCore("SendNotification", {Title = "Bring", Text = "ไม่พบผู้เล่น: "..playerName, Duration = 3})
+        BringActive = false
+        return
+    end
+    local char = target.Character or target.CharacterAdded:Wait()
+    local targetRoot = char:WaitForChild("HumanoidRootPart")
+    for _, v in ipairs(workspace:GetDescendants()) do pcall(_forcePart, v) end
+    BringConnection = workspace.DescendantAdded:Connect(function(v) pcall(_forcePart, v) end)
+    task.spawn(function()
+        while BringActive do
+            if targetRoot and targetRoot.Parent then
+                _bringAttachment1.WorldCFrame = targetRoot.CFrame
+            end
+            task.wait()
+        end
+    end)
+end
+
+local function getPlayerList()
+    local names = {}
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer then table.insert(names, plr.Name) end
+    end
+    return names
+end
+
+local bringDropdown = PlayerTab:Dropdown({
+    Title = "เลือกผู้เล่น",
+    Values = getPlayerList(),
+    Value = nil,
+    Multi = false,
+    Callback = function(selected)
+        if type(selected) == "string" then
+            selectedBringPlayer = selected
+        end
+    end
+})
+
+PlayerTab:Button({
+    Title = "รีเฟรชรายชื่อ",
+    Callback = function()
+        bringDropdown:Refresh(getPlayerList(), true)
+        game:GetService("StarterGui"):SetCore("SendNotification", {Title = "Bring", Text = "อัปเดตรายชื่อเรียบร้อย", Duration = 1})
+    end
+})
+
+local function updateBringDropdown()
+    pcall(function() bringDropdown:Refresh(getPlayerList(), true) end)
+end
+Players.PlayerAdded:Connect(updateBringDropdown)
+Players.PlayerRemoving:Connect(updateBringDropdown)
+
+local bringToggle = PlayerTab:Toggle({
+    Title = "Bring Player",
+    Desc = "ดึงผู้เล่นที่เลือกมาหาคุณตลอด",
+    Value = false,
+    Callback = function(state)
+        if state then
+            if selectedBringPlayer == "" then
+                game:GetService("StarterGui"):SetCore("SendNotification", {Title = "Bring", Text = "กรุณาเลือกผู้เล่นก่อน", Duration = 2})
+                bringToggle:Set(false)
+                return
+            end
+            toggleBringPlayer(selectedBringPlayer, true)
+        else
+            toggleBringPlayer(selectedBringPlayer, false)
+        end
+    end
+})
+
+Players.PlayerRemoving:Connect(function(player)
+    if BringActive and selectedBringPlayer == player.Name then
+        bringToggle:Set(false)
+        toggleBringPlayer(selectedBringPlayer, false)
+        game:GetService("StarterGui"):SetCore("SendNotification", {Title = "Bring", Text = "ผู้เล่นออกจากเกม หยุดดึง", Duration = 2})
+    end
+end)
+
 local AutoFinishToggle = PlayerTab:Toggle({
     Title   = "Auto Finish",
     Default = false,
