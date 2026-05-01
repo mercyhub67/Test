@@ -2455,14 +2455,6 @@ local function toggleBringPlayer(playerName, state)
     end)
 end
 
-local function getPlayerList()
-    local names = {}
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer then table.insert(names, plr.Name) end
-    end
-    return names
-end
-
 local bringDropdown = PlayerTab:Dropdown({
     Title = "เลือกผู้เล่น",
     Values = getPlayerList(),
