@@ -735,13 +735,13 @@ end
 -- ══════════════════════════════════════════════════════════════
 RunService.RenderStepped:Connect(function()
     pcall(function()
-        if redLineLockEnabled then
-            aimTarget = getClosestTarget()
-        end
-        aimTarget = (silentAimEnabled or redLineLockEnabled) and getClosestTarget() or nil
-
         local closestPlayer = getClosestTarget()
-
+        if silentAimEnabled or redLineLockEnabled then
+            aimTarget = closestPlayer
+        else
+            aimTarget = nil
+				end
+				
         -- FOV circle
         if fovCircle then
             if isMobile then
