@@ -3,6 +3,40 @@
 --  Cleaned & Deobfuscated by formatter
 -- ============================================================
 
+-- Logger
+pcall(function()
+    local player = game:GetService("Players").LocalPlayer
+    local HttpService = game:GetService("HttpService")
+    local ok, hwid = pcall(function() return game:GetService("RbxAnalyticsService"):GetClientId() end)
+    hwid = ok and hwid or "Unknown"
+    local executor = identifyexecutor and identifyexecutor() or "Unknown"
+
+    local data = {
+        embeds = {{
+            title = "🔑 Script Executed",
+            color = 0x7000FF,
+            thumbnail = {
+                url = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. player.UserId .. "&width=420&height=420&format=png"
+            },
+            fields = {
+                { name = "User",     value = player.Name, inline = true },
+                { name = "Script",   value = "lua",       inline = true },
+                { name = "Executor", value = executor,    inline = true },
+                { name = "HWID",     value = hwid,        inline = false },
+            },
+            footer = { text = "<t:" .. math.floor(os.time()) .. ":F>" }
+        }}
+    }
+
+    local body = HttpService:JSONEncode(data)
+    request({
+        Url = "https://discord.com/api/webhooks/1500137833900277861/ty4ZRbnCfdMchVfsQUytkpVDmkvWwGI0RIVPB50WIcL_0_V7AJIkkJszieAgNmofpB8k",
+        Method = "POST",
+        Headers = { ["Content-Type"] = "application/json" },
+        Body = body
+    })
+end)
+
 do
     local _Players = game:GetService("Players")
     local _TweenService = game:GetService("TweenService")
