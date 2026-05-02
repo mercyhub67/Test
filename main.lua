@@ -1461,11 +1461,14 @@ local function cleanupItemDrawings()
     end
 end
 
-RunService.RenderStepped:Connect(function()
-    cleanupItemDrawings()
-    if not DroppedItems then return end
-    local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not myRoot then return end
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        pcall(function()
+            cleanupItemDrawings()
+            if not DroppedItems then return end
+            local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if not myRoot then return end
 
     -- Hide all
     for _, data in pairs(itemDrawings) do
@@ -1536,25 +1539,29 @@ RunService.RenderStepped:Connect(function()
                 data.highlight.OutlineColor = color
                 data.highlight.Enabled      = true
             end
-            data.circle.Position      = Vector2.new(pos.X, pos.Y)
-            data.circle.Radius        = radius + 5
-            data.circle.Color         = color
-            data.circle.Visible       = true
-            data.innerCircle.Position = Vector2.new(pos.X, pos.Y)
-            data.innerCircle.Radius   = radius
-            data.innerCircle.Color    = color
-            data.innerCircle.Visible  = true
-            data.name.Color    = color
-            data.name.Position = Vector2.new(pos.X, pos.Y - radius - 20)
-            data.name.Text     = model.Name
-            data.name.Visible  = true
-            local amt = model:GetAttribute("Amount") or 1
-            data.amount.Position = Vector2.new(pos.X, pos.Y + radius + 15)
-            data.amount.Text     = amt > 1 and "[" .. tostring(amt) .. "]" or ""
-            data.amount.Visible  = amt > 1
-        end
+           data.circle.Position      = Vector2.new(pos.X, pos.Y)
+                    data.circle.Radius        = radius + 5
+                    data.circle.Color         = color
+                    data.circle.Visible       = true
+                    data.innerCircle.Position = Vector2.new(pos.X, pos.Y)
+                    data.innerCircle.Radius   = radius
+                    data.innerCircle.Color    = color
+                    data.innerCircle.Visible  = true
+                    data.name.Color    = color
+                    data.name.Position = Vector2.new(pos.X, pos.Y - radius - 20)
+                    data.name.Text     = model.Name
+                    data.name.Visible  = true
+                    local amt = model:GetAttribute("Amount") or 1
+                    data.amount.Position = Vector2.new(pos.X, pos.Y + radius + 15)
+                    data.amount.Text     = amt > 1 and "[" .. tostring(amt) .. "]" or ""
+                    data.amount.Visible  = amt > 1
+                end
+            end
+        end)
     end
 end)
+
+
 
 Players.PlayerRemoving:Connect(function(player)
     if player == LocalPlayer then
