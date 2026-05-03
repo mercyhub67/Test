@@ -262,22 +262,6 @@ local BringActive = false
 local BringConnection = nil
 local bringNameInput = ""
 
-local _bringFolder = nil
-local _bringCorePart = nil
-local _bringAttachment1 = nil
-
-pcall(function()
-    _bringFolder = Instance.new("Folder", workspace)
-    _bringFolder.Name = "BringSystem"
-    _bringCorePart = Instance.new("Part", _bringFolder)
-    _bringCorePart.Name = "BringCore"
-    _bringCorePart.Anchored = true
-    _bringCorePart.CanCollide = false
-    _bringCorePart.Transparency = 1
-    _bringAttachment1 = Instance.new("Attachment", _bringCorePart)
-    _bringAttachment1.Name = "BringAttachment"
-end)
-
 local function _forcePart(v)
     if v:IsA("BasePart") and not v.Anchored and not v.Parent:FindFirstChildOfClass("Humanoid") and
        not v.Parent:FindFirstChild("Head") and v.Name ~= "Handle" then
