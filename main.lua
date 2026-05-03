@@ -254,6 +254,9 @@ local snapDepth           = 10
 local snapClickCount      = 0
 local underMapPos         = nil
 local isFlickering        = false
+
+if not game:IsLoaded() then game.Loaded:Wait() end
+
 -- Bring System
 local BringActive = false
 local BringConnection = nil
