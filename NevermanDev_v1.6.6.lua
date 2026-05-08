@@ -361,8 +361,10 @@ Window:SetBackgroundTransparency(0.25)
 Window:SetBackgroundImageTransparency(0.25)
 
 -- ── Toggle Button (NM_Toggle) ─────────────────────────────────
-local _gui = Instance.new("ScreenGui", game.CoreGui)
-_gui.Name = "NM_Toggle"
+local parentGui = gethui and gethui() or game:GetService("CoreGui")
+
+local _gui = Instance.new("ScreenGui")
+_gui.Parent = parentGui
 
 local ICON_ID = "rbxassetid://72830195117719"
 
