@@ -2086,11 +2086,15 @@ pcall(function() CombatTab:Divider() end)
 local WeaponTab = Window:Tab({ Title = "WEAPON:", Icon = "layers" })
 WeaponTab:Section({ Title = "MODS:" })
 
+-- Fire Rate
 WeaponTab:Slider({
     Title = "Fire Rate",
     Step  = 10,
     Value = { Min = 100, Max = 3000, Default = 1000 },
-    Callback = function(v) getEnv().FireRateValue = v end,
+    Callback = function(v)
+        fireRateValue = v          -- ✅ ใช้ local ตัวเดิม
+        getEnv().FireRateValue = v -- เผื่อส่วนอื่นใช้ global ด้วย
+    end,
 })
 
 WeaponTab:Slider({
